@@ -96,11 +96,14 @@ public:
     explicit GraphicsVideoSurface(QGraphicsView *parent);
     virtual ~GraphicsVideoSurface();
 
+    /*! Sets the video sink element that provides this surface's image. */
+    bool setVideoSink(ElementPtr sink);
+
     /*! Returns the video sink element that provides this surface's image.
-     * The element will be constructed the first time that this function
+     * If unset, the element will be constructed the first time that this function
      * is called. The surface will always keep a reference to this element.
      */
-    ElementPtr videoSink() const;
+    ElementPtr videoSink();
 
 private:
     QTGSTREAMERUI_NO_EXPORT void onUpdate();

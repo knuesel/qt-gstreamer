@@ -41,39 +41,71 @@ GraphicsVideoSurface::~GraphicsVideoSurface()
     delete d;
 }
 
-ElementPtr GraphicsVideoSurface::videoSink() const
+bool GraphicsVideoSurface::setVideoSink(ElementPtr sink)
+{
+    if (!d->videoSink.isNull()) {
+        QGlib::disconnect(d->videoSink, "update",
+                const_cast<GraphicsVideoSurface*>(this),
+                &GraphicsVideoSurface::onUpdate);
+    }
+
+    d->videoSink = sink;
+
+    if (d->videoSink.isNull()) {
+        return true;
+    }
+
+#ifndef QTGSTREAMER_UI_NO_OPENGL
+    //if the viewport is a QGLWidget, try to set the glcontext property.
+    QGLWidget *glw = qobject_cast<QGLWidget*>(d->view->viewport());
+    if (glw) {
+        glw->makeCurrent();
+        d->videoSink->setProperty("glcontext", (void*) QGLContext::currentContext());
+        glw->doneCurrent();
+    }
+#endif
+
+    if (d->videoSink->setState(QGst::StateReady) != QGst::StateChangeSuccess) {
+        qDebug("Failed to set qt video sink state to ready.");
+        d->videoSink.clear();
+        return false;
+    }
+
+    QGlib::connect(d->videoSink, "update",
+            const_cast<GraphicsVideoSurface*>(this),
+            &GraphicsVideoSurface::onUpdate);
+
+    return true;
+}
+
+ElementPtr GraphicsVideoSurface::videoSink()
 {
     if (d->videoSink.isNull()) {
+        ElementPtr sink;
+
 #ifndef QTGSTREAMER_UI_NO_OPENGL
-        //if the viewport is a QGLWidget, profit from it
+        //if the viewport is a QGLWidget, try to use a qtglvideosink.
         QGLWidget *glw = qobject_cast<QGLWidget*>(d->view->viewport());
         if (glw) {
-            d->videoSink = QGst::ElementFactory::make(QTGLVIDEOSINK_NAME);
-
-            if (!d->videoSink.isNull()) {
-                glw->makeCurrent();
-                d->videoSink->setProperty("glcontext", (void*) QGLContext::currentContext());
-                glw->doneCurrent();
-
-                if (d->videoSink->setState(QGst::StateReady) != QGst::StateChangeSuccess) {
-                    d->videoSink.clear();
-                }
+            sink = QGst::ElementFactory::make(QTGLVIDEOSINK_NAME);
+            if (sink.isNull()) {
+                qDebug("Failed to create qtglvideosink. Will try qtvideosink instead.");
+            }
+            else if (!setVideoSink(sink)) {
+                qDebug("Failed to use qtglvideosink. Will try qtvideosink instead.");
             }
         }
 #endif
 
         if (d->videoSink.isNull()) {
-            d->videoSink = QGst::ElementFactory::make(QTVIDEOSINK_NAME);
-
-            if (d->videoSink.isNull()) {
+            sink = QGst::ElementFactory::make(QTVIDEOSINK_NAME);
+            if (sink.isNull()) {
                 qCritical("Failed to create qtvideosink. Make sure it is installed correctly");
                 return ElementPtr();
             }
+            setVideoSink(sink); // Might reset d->videoSink to null if state change fails
         }
 
-        QGlib::connect(d->videoSink, "update",
-                       const_cast<GraphicsVideoSurface*>(this),
-                       &GraphicsVideoSurface::onUpdate);
     }
 
     return d->videoSink;
