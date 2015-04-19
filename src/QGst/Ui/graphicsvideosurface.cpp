@@ -57,11 +57,14 @@ bool GraphicsVideoSurface::setVideoSink(ElementPtr sink)
 
 #ifndef QTGSTREAMER_UI_NO_OPENGL
     //if the viewport is a QGLWidget, try to set the glcontext property.
-    QGLWidget *glw = qobject_cast<QGLWidget*>(d->view->viewport());
-    if (glw) {
-        glw->makeCurrent();
-        d->videoSink->setProperty("glcontext", (void*) QGLContext::currentContext());
-        glw->doneCurrent();
+    if (d->view)
+    {
+        QGLWidget *glw = qobject_cast<QGLWidget*>(d->view->viewport());
+        if (glw) {
+            glw->makeCurrent();
+            d->videoSink->setProperty("glcontext", (void*) QGLContext::currentContext());
+            glw->doneCurrent();
+        }
     }
 #endif
 
@@ -85,14 +88,17 @@ ElementPtr GraphicsVideoSurface::videoSink()
 
 #ifndef QTGSTREAMER_UI_NO_OPENGL
         //if the viewport is a QGLWidget, try to use a qtglvideosink.
-        QGLWidget *glw = qobject_cast<QGLWidget*>(d->view->viewport());
-        if (glw) {
-            sink = QGst::ElementFactory::make(QTGLVIDEOSINK_NAME);
-            if (sink.isNull()) {
-                qDebug("Failed to create qtglvideosink. Will try qtvideosink instead.");
-            }
-            else if (!setVideoSink(sink)) {
-                qDebug("Failed to use qtglvideosink. Will try qtvideosink instead.");
+        if (d->view)
+        {
+            QGLWidget *glw = qobject_cast<QGLWidget*>(d->view->viewport());
+            if (glw) {
+                sink = QGst::ElementFactory::make(QTGLVIDEOSINK_NAME);
+                if (sink.isNull()) {
+                    qDebug("Failed to create qtglvideosink. Will try qtvideosink instead.");
+                }
+                else if (!setVideoSink(sink)) {
+                    qDebug("Failed to use qtglvideosink. Will try qtvideosink instead.");
+                }
             }
         }
 #endif

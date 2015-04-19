@@ -57,8 +57,10 @@ void GraphicsVideoWidget::paint(QPainter *painter, const QStyleOptionGraphicsIte
 
     QRectF r = rect();
 
+    QGraphicsView* view = m_surface.data()->d->view;
+
     if (!m_surface || m_surface.data()->d->videoSink.isNull() ||
-        widget != m_surface.data()->d->view->viewport()
+        (view && widget != m_surface.data()->d->view->viewport())
     ) {
         painter->fillRect(r, Qt::black);
     } else {

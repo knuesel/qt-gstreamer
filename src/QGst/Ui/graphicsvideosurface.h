@@ -93,6 +93,12 @@ class QTGSTREAMERUI_EXPORT GraphicsVideoSurface : public QObject
     Q_OBJECT
     Q_DISABLE_COPY(GraphicsVideoSurface)
 public:
+    /*! Constructs a GraphicsVideoSurface for the specified QGraphicsView.
+     * If you don't use OpenGL, you can set the view to NULL, which allows
+     * using the surface in multiple views. In this case you will want to
+     * manually set the GraphicsVideoSurface parent to an appropriate
+     * QObject.
+     */
     explicit GraphicsVideoSurface(QGraphicsView *parent);
     virtual ~GraphicsVideoSurface();
 
